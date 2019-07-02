@@ -3,7 +3,14 @@
 
 document.addEventListener("DOMContentLoaded", () => {
   const newQuoteForm = document.getElementById('new-quote-form')
+  const h1 = document.querySelector('h1')
+  const div = document.createElement('div')
+
+  div.appendChild(addSortButton())
+  h1.appendChild(div)
   fetchAllQuotes()
+  fetchAllLikes()
+
   newQuoteForm.addEventListener('submit', () => {
     event.preventDefault()
     addNewQuote(newQuoteForm)
@@ -12,7 +19,7 @@ document.addEventListener("DOMContentLoaded", () => {
 })
 
 function fetchAllQuotes() {
-  fetch('http://localhost:3000/quotes?_embed=likes')
+  fetch('http://localhost:3000/quotes')
   .then(res => res.json())
   .then(json => {
     for (let quote of json)
@@ -20,8 +27,28 @@ function fetchAllQuotes() {
   })
 }
 
+function fetchSortedQuotes() {
+  fetch('http://localhost:3000/quotes?_sort=author')
+  .then(res => res.json())
+  .then(json => {
+    for (let quote of json) {
+      createQuote(quote)
+    }
+  })
+}
+
+function fetchAllLikes() {
+  return fetch('http://localhost:3000/likes')
+  .then(res => res.json())
+  .then(json => {
+    for (let like of json) {
+      findLike(like)
+    }
+  })
+}
+
 function createQuote(quoteObject) {
-  const quotelist = document.getElementById('quote-list')
+  const quoteList = document.getElementById('quote-list')
   const li = document.createElement('li')
   const blockquote = document.createElement('blockquote')
   const p = document.createElement('p')
@@ -40,15 +67,11 @@ function createQuote(quoteObject) {
   p.textContent = quoteObject.quote
   footer.className = 'blockquote-footer'
   footer.textContent = quoteObject.author
+  footer.id = quoteObject.id
   button1.className = 'btn-success'
   button1.textContent = 'Likes: '
   //Need logic for if adding new quote
-  if (quoteObject.likes) {
-    span.textContent = quoteObject.likes.length
-  }
-  else {
-    span.textContent = 0
-  }
+  span.textContent = 0
   button2.className = 'btn-secondary'
   button2.textContent = 'Edit'
   button3.className = 'btn-danger'
@@ -78,7 +101,7 @@ function createQuote(quoteObject) {
 
   button3.addEventListener('click', () => {
     deleteQuote(quoteObject)
-    quotelist.removeChild(li)
+    quoteList.removeChild(li)
   })
 
   blockquote.appendChild(p)
@@ -90,7 +113,18 @@ function createQuote(quoteObject) {
   blockquote.appendChild(button3)
   blockquote.appendChild(editForm)
   li.appendChild(blockquote)
-  quotelist.appendChild(li)
+  quoteList.appendChild(li)
+
+}
+
+function findLike(likeObject) {
+  const footers = document.getElementsByTagName('footer')
+  for (let footer of footers) {
+    let span = footer.nextSibling.nextSibling.children[0]
+    if (likeObject.quoteId === parseInt(footer.id)) {
+      ++span.textContent
+    }
+  }
 
 }
 
@@ -190,4 +224,32 @@ function updateQuote(object) {
     })
   })
   .then(res => res.json())
+}
+
+function addSortButton() {
+  const sort = document.createElement('button')
+
+  sort.textContent = 'Sort Alphabetically: OFF'
+  sort.className = 'btn btn-primary'
+
+  sort.addEventListener('click', () => {
+    sortAlphabetically(sort)
+  })
+  return sort
+}
+
+function sortAlphabetically(htmlElement) {
+  const quoteList = document.getElementById('quote-list')
+  if (htmlElement.textContent === 'Sort Alphabetically: OFF') {
+    quoteList.textContent = ''
+    htmlElement.textContent = 'Sort Alphabetically: ON'
+    fetchSortedQuotes()
+    fetchAllLikes()
+  }
+  else {
+    htmlElement.textContent = 'Sort Alphabetically: OFF'
+    quoteList.textContent = ''
+    fetchAllQuotes()
+    fetchAllLikes()
+  }
 }
